@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './Dashboard.css';
+import { supabase } from './supabase';
 
 // Define props interface
 interface DashboardPageProps {
@@ -15,17 +16,26 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Validate inputs
     if (!name.trim() || !email.trim()) {
       setErrorMessage('Please fill in both name and email fields.');
-      setTimeout(() => setErrorMessage(''), 3000); // Clear error after 3 seconds
+      setTimeout(() => setErrorMessage(''), 3000);
       return;
     }
-    // Add student to state (no Supabase yet)
+
+    // Save to Supabase
+    const { error } = await supabase.from('students').insert([{ name, email }]);
+    if (error) {
+      setErrorMessage('Failed to add student: ' + error.message);
+      setTimeout(() => setErrorMessage(''), 3000);
+      return;
+    }
+
+    // Update local state
     const newStudent = {
-      id: Math.random().toString(), // Temporary ID until Supabase is added
+      id: Math.random().toString(), // Temporary ID (we'll fetch real ID in next step)
       name,
       email,
     };
@@ -33,7 +43,7 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
     setSuccessMessage(`Student added: ${name}, ${email}`);
     setName('');
     setEmail('');
-    setTimeout(() => setSuccessMessage(''), 3000); // Clear success message
+    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   return (
