@@ -12,6 +12,7 @@ interface DashboardPageProps {
 function DashboardPage({ students, setStudents }: DashboardPageProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,9 +23,11 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
       email,
     };
     setStudents([...students, newStudent]);
+    setSuccessMessage(`Student added: ${name}, ${email}`);
     setName('');
     setEmail('');
-    alert(`Student added: ${name}, ${email}`);
+    // Clear success message after 3 seconds
+    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   return (
@@ -54,6 +57,7 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
           Add Student
         </button>
       </form>
+      {successMessage && <p className="success-message">{successMessage}</p>}
       <ul className="student-list">
         {students.length === 0 ? (
           <p>No students yet.</p>
