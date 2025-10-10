@@ -13,10 +13,17 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Temporarily add student to state (no Supabase yet)
+    // Validate inputs
+    if (!name.trim() || !email.trim()) {
+      setErrorMessage('Please fill in both name and email fields.');
+      setTimeout(() => setErrorMessage(''), 3000); // Clear error after 3 seconds
+      return;
+    }
+    // Add student to state (no Supabase yet)
     const newStudent = {
       id: Math.random().toString(), // Temporary ID until Supabase is added
       name,
@@ -26,8 +33,7 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
     setSuccessMessage(`Student added: ${name}, ${email}`);
     setName('');
     setEmail('');
-    // Clear success message after 3 seconds
-    setTimeout(() => setSuccessMessage(''), 3000);
+    setTimeout(() => setSuccessMessage(''), 3000); // Clear success message
   };
 
   return (
@@ -58,6 +64,7 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
         </button>
       </form>
       {successMessage && <p className="success-message">{successMessage}</p>}
+      {errorMessage && <p className="error-message">{errorMessage}</p>}
       <ul className="student-list">
         {students.length === 0 ? (
           <p>No students yet.</p>
