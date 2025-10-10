@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './Dashboard.css';
 
 // Define props interface
 interface DashboardPageProps {
@@ -27,11 +28,11 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
   };
 
   return (
-    <div>
+    <div className="dashboard-container">
       <h2>Student Dashboard</h2>
       <p>Welcome to the school management system!</p>
-      <form onSubmit={handleSubmit}>
-        <div>
+      <form className="form" onSubmit={handleSubmit}>
+        <div className="form-group">
           <label htmlFor="name">Name:</label>
           <input
             type="text"
@@ -40,7 +41,7 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
             onChange={(e) => setName(e.target.value)}
           />
         </div>
-        <div>
+        <div className="form-group">
           <label htmlFor="email">Email:</label>
           <input
             type="email"
@@ -49,14 +50,16 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
-        <button type="submit">Add Student</button>
+        <button type="submit" className="submit-button">
+          Add Student
+        </button>
       </form>
-      <ul>
+      <ul className="student-list">
         {students.length === 0 ? (
           <p>No students yet.</p>
         ) : (
           students.map((student) => (
-            <li key={student.id}>
+            <li key={student.id} className="student-item">
               {student.name} ({student.email})
             </li>
           ))
