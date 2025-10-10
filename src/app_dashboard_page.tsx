@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 import { supabase } from './supabase';
 
@@ -15,6 +15,23 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
   const [email, setEmail] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Fetch students on component mount
+  useEffect(() => {
+    const fetchStudents = async () => {
+      setLoading(true);
+      const { data, error } = await supabase.from('students').select('*');
+      if (error) {
+        setErrorMessage('Failed to fetch students: ' + error.message);
+        setTimeout(() => setErrorMessage(''), 3000);
+      } else {
+        setStudents(data || []);
+      }
+      setLoading(false);
+    };
+    fetchStudents();
+  }, [setStudents]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,24 +43,27 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
     }
 
     // Save to Supabase
-    const { error } = await supabase.from('students').insert([{ name, email }]);
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('students')
+      .insert([{ name, email }])
+      .select();
     if (error) {
       setErrorMessage('Failed to add student: ' + error.message);
       setTimeout(() => setErrorMessage(''), 3000);
+      setLoading(false);
       return;
     }
 
-    // Update local state
-    const newStudent = {
-      id: Math.random().toString(), // Temporary ID (we'll fetch real ID in next step)
-      name,
-      email,
-    };
-    setStudents([...students, newStudent]);
-    setSuccessMessage(`Student added: ${name}, ${email}`);
-    setName('');
-    setEmail('');
-    setTimeout(() => setSuccessMessage(''), 3000);
+    // Update local state with real data from Supabase
+    if (data && data.length > 0) {
+      setStudents([...students, data[0]]);
+      setSuccessMessage(`Student added: ${name}, ${email}`);
+      setName('');
+      setEmail('');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    }
+    setLoading(false);
   };
 
   return (
@@ -58,6 +78,7 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            disabled={loading}
           />
         </div>
         <div className="form-group">
@@ -67,25 +88,30 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
           />
         </div>
-        <button type="submit" className="submit-button">
-          Add Student
+        <button type="submit" className="submit-button" disabled={loading}>
+          {loading ? 'Submitting...' : 'Add Student'}
         </button>
       </form>
       {successMessage && <p className="success-message">{successMessage}</p>}
       {errorMessage && <p className="error-message">{errorMessage}</p>}
-      <ul className="student-list">
-        {students.length === 0 ? (
-          <p>No students yet.</p>
-        ) : (
-          students.map((student) => (
-            <li key={student.id} className="student-item">
-              {student.name} ({student.email})
-            </li>
-          ))
-        )}
-      </ul>
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <ul className="student-list">
+          {students.length === 0 ? (
+            <p>No students yet.</p>
+          ) : (
+            students.map((student) => (
+              <li key={student.id} className="student-item">
+                {student.name} ({student.email})
+              </li>
+            ))
+          )}
+        </ul>
+      )}
     </div>
   );
 }
