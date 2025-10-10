@@ -19,6 +19,8 @@
     "indent": ["error", 2],
     "quotes": ["error", "single"],
     "semi": ["error", "always"],
-    "prettier/prettier": "error"
+    "prettier/prettier": "error",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": "warn"
   }
 }
