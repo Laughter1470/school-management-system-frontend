@@ -17,6 +17,12 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Email validation regex
+  const isValidEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   // Fetch students on component mount
   useEffect(() => {
     const fetchStudents = async () => {
@@ -38,6 +44,11 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
     // Validate inputs
     if (!name.trim() || !email.trim()) {
       setErrorMessage('Please fill in both name and email fields.');
+      setTimeout(() => setErrorMessage(''), 3000);
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setErrorMessage('Please enter a valid email address.');
       setTimeout(() => setErrorMessage(''), 3000);
       return;
     }
