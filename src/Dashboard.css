@@ -47,6 +47,9 @@
   border: 1px solid #ddd;
   border-radius: 4px;
   margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .success-message {
@@ -59,4 +62,22 @@
   color: red;
   margin: 10px 0;
   font-weight: bold;
+}
+
+.delete-button {
+  padding: 5px 10px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  background-color: #c82333;
+}
+
+.delete-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }

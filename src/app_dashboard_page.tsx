@@ -77,6 +77,27 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
     setLoading(false);
   };
 
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete ${name}?`)) {
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.from('students').delete().eq('id', id);
+    if (error) {
+      setErrorMessage('Failed to delete student: ' + error.message);
+      setTimeout(() => setErrorMessage(''), 3000);
+      setLoading(false);
+      return;
+    }
+
+    // Update local state to remove deleted student
+    setStudents(students.filter((student) => student.id !== id));
+    setSuccessMessage(`Student ${name} deleted successfully.`);
+    setTimeout(() => setSuccessMessage(''), 3000);
+    setLoading(false);
+  };
+
   return (
     <div className="dashboard-container">
       <h2>Student Dashboard</h2>
@@ -118,6 +139,13 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
             students.map((student) => (
               <li key={student.id} className="student-item">
                 {student.name} ({student.email})
+                <button
+                  className="delete-button"
+                  onClick={() => handleDelete(student.id, student.name)}
+                  disabled={loading}
+                >
+                  Delete
+                </button>
               </li>
             ))
           )}
