@@ -56,6 +56,21 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
 
     setLoading(true);
     if (editingStudentId) {
+      // Check if email is unchanged or not a duplicate for update
+      const currentStudent = students.find((s) => s.id === editingStudentId);
+      if (currentStudent?.email !== email) {
+        const { data: existing } = await supabase
+          .from('students')
+          .select('id')
+          .eq('email', email)
+          .neq('id', editingStudentId);
+        if (existing && existing.length > 0) {
+          setErrorMessage('This email is already in use by another student.');
+          setTimeout(() => setErrorMessage(''), 3000);
+          setLoading(false);
+          return;
+        }
+      }
       // Update existing student in Supabase
       const { data, error } = await supabase
         .from('students')
@@ -63,7 +78,11 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
         .eq('id', editingStudentId)
         .select();
       if (error) {
-        setErrorMessage('Failed to update student: ' + error.message);
+        const errorMsg =
+          error.code === '23505'
+            ? 'This email is already in use by another student.'
+            : 'Failed to update student: ' + error.message;
+        setErrorMessage(errorMsg);
         setTimeout(() => setErrorMessage(''), 3000);
         setLoading(false);
         return;
@@ -77,13 +96,28 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
         setSuccessMessage(`Student updated: ${name}, ${email}`);
       }
     } else {
+      // Check for duplicate email before adding
+      const { data: existing } = await supabase
+        .from('students')
+        .select('id')
+        .eq('email', email);
+      if (existing && existing.length > 0) {
+        setErrorMessage('This email is already in use by another student.');
+        setTimeout(() => setErrorMessage(''), 3000);
+        setLoading(false);
+        return;
+      }
       // Add new student to Supabase
       const { data, error } = await supabase
         .from('students')
         .insert([{ name, email }])
         .select();
       if (error) {
-        setErrorMessage('Failed to add student: ' + error.message);
+        const errorMsg =
+          error.code === '23505'
+            ? 'This email is already in use by another student.'
+            : 'Failed to add student: ' + error.message;
+        setErrorMessage(errorMsg);
         setTimeout(() => setErrorMessage(''), 3000);
         setLoading(false);
         return;
