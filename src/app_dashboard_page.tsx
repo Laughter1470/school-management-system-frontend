@@ -16,6 +16,7 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
 
   // Email validation regex
   const isValidEmail = (email: string) => {
@@ -53,28 +54,63 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
       return;
     }
 
-    // Save to Supabase
     setLoading(true);
-    const { data, error } = await supabase
-      .from('students')
-      .insert([{ name, email }])
-      .select();
-    if (error) {
-      setErrorMessage('Failed to add student: ' + error.message);
-      setTimeout(() => setErrorMessage(''), 3000);
-      setLoading(false);
-      return;
+    if (editingStudentId) {
+      // Update existing student in Supabase
+      const { data, error } = await supabase
+        .from('students')
+        .update({ name, email })
+        .eq('id', editingStudentId)
+        .select();
+      if (error) {
+        setErrorMessage('Failed to update student: ' + error.message);
+        setTimeout(() => setErrorMessage(''), 3000);
+        setLoading(false);
+        return;
+      }
+      if (data && data.length > 0) {
+        setStudents(
+          students.map((student) =>
+            student.id === editingStudentId ? data[0] : student
+          )
+        );
+        setSuccessMessage(`Student updated: ${name}, ${email}`);
+      }
+    } else {
+      // Add new student to Supabase
+      const { data, error } = await supabase
+        .from('students')
+        .insert([{ name, email }])
+        .select();
+      if (error) {
+        setErrorMessage('Failed to add student: ' + error.message);
+        setTimeout(() => setErrorMessage(''), 3000);
+        setLoading(false);
+        return;
+      }
+      if (data && data.length > 0) {
+        setStudents([...students, data[0]]);
+        setSuccessMessage(`Student added: ${name}, ${email}`);
+      }
     }
 
-    // Update local state with real data from Supabase
-    if (data && data.length > 0) {
-      setStudents([...students, data[0]]);
-      setSuccessMessage(`Student added: ${name}, ${email}`);
-      setName('');
-      setEmail('');
-      setTimeout(() => setSuccessMessage(''), 3000);
-    }
+    setName('');
+    setEmail('');
+    setEditingStudentId(null);
+    setTimeout(() => setSuccessMessage(''), 3000);
     setLoading(false);
+  };
+
+  const handleEdit = (student: { id: string; name: string; email: string }) => {
+    setName(student.name);
+    setEmail(student.email);
+    setEditingStudentId(student.id);
+  };
+
+  const handleCancelEdit = () => {
+    setName('');
+    setEmail('');
+    setEditingStudentId(null);
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -91,7 +127,6 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
       return;
     }
 
-    // Update local state to remove deleted student
     setStudents(students.filter((student) => student.id !== id));
     setSuccessMessage(`Student ${name} deleted successfully.`);
     setTimeout(() => setSuccessMessage(''), 3000);
@@ -124,8 +159,22 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
           />
         </div>
         <button type="submit" className="submit-button" disabled={loading}>
-          {loading ? 'Submitting...' : 'Add Student'}
+          {loading
+            ? 'Submitting...'
+            : editingStudentId
+              ? 'Update Student'
+              : 'Add Student'}
         </button>
+        {editingStudentId && (
+          <button
+            type="button"
+            className="cancel-button"
+            onClick={handleCancelEdit}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+        )}
       </form>
       {successMessage && <p className="success-message">{successMessage}</p>}
       {errorMessage && <p className="error-message">{errorMessage}</p>}
@@ -139,13 +188,22 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
             students.map((student) => (
               <li key={student.id} className="student-item">
                 {student.name} ({student.email})
-                <button
-                  className="delete-button"
-                  onClick={() => handleDelete(student.id, student.name)}
-                  disabled={loading}
-                >
-                  Delete
-                </button>
+                <div>
+                  <button
+                    className="edit-button"
+                    onClick={() => handleEdit(student)}
+                    disabled={loading}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="delete-button"
+                    onClick={() => handleDelete(student.id, student.name)}
+                    disabled={loading}
+                  >
+                    Delete
+                  </button>
+                </div>
               </li>
             ))
           )}
