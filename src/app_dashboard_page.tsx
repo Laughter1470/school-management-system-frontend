@@ -16,6 +16,7 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<'name' | 'email'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Email validation regex
   const isValidEmail = (email: string) => {
@@ -39,9 +40,15 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
     fetchStudents();
   }, [setStudents]);
 
-  // Sort students when sortField or sortOrder changes
+  // Filter and sort students
+  const filteredStudents = students.filter(
+    (student) =>
+      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   useEffect(() => {
-    const sortedStudents = [...students].sort((a, b) => {
+    const sortedStudents = [...filteredStudents].sort((a, b) => {
       const fieldA = a[sortField].toLowerCase();
       const fieldB = b[sortField].toLowerCase();
       if (sortOrder === 'asc') {
@@ -51,7 +58,7 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
       }
     });
     setStudents(sortedStudents);
-  }, [sortField, sortOrder, students, setStudents]);
+  }, [sortField, sortOrder, students, searchQuery, setStudents]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,6 +236,17 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
         <p className="mt-4 text-red-600 font-semibold">{errorMessage}</p>
       )}
       <div className="mt-4 flex space-x-2">
+        <label htmlFor="search" className="text-gray-700 font-semibold">Search:</label>
+        <input
+          type="text"
+          id="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by name or email"
+          className="p-2 w-full border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+      <div className="mt-4 flex space-x-2">
         <label htmlFor="sortField" className="text-gray-700 font-semibold">Sort by:</label>
         <select
           id="sortField"
@@ -254,10 +272,10 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
         <p className="mt-4 text-gray-600">Loading...</p>
       ) : (
         <ul className="mt-6 space-y-3">
-          {students.length === 0 ? (
-            <p className="text-gray-600">No students yet.</p>
+          {filteredStudents.length === 0 ? (
+            <p className="text-gray-600">No students found.</p>
           ) : (
-            students.map((student) => (
+            filteredStudents.map((student) => (
               <li key={student.id} className="flex justify-between items-center p-3 bg-gray-50 border border-gray-200 rounded">
                 <span className="text-gray-800">{student.name} ({student.email})</span>
                 <div className="flex space-x-2">
