@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from './supabase';
 
 // Define props interface
 interface DashboardPageProps {
   students: { id: string; name: string; email: string }[];
-  setStudents: React.Dispatch<
-    React.SetStateAction<{ id: string; name: string; email: string }[]>
-  >;
+  setStudents: React.Dispatch<React.SetStateAction<{ id: string; name: string; email: string }[]>>;
 }
 
 function DashboardPage({ students, setStudents }: DashboardPageProps) {
@@ -20,13 +18,10 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Email validation regex
-  const isValidEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  // Email validation
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  // Fetch students on component mount
+  // Initial Fetch
   useEffect(() => {
     const fetchStudents = async () => {
       setLoading(true);
@@ -42,27 +37,52 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
     fetchStudents();
   }, [setStudents]);
 
-  // Filter and sort students dynamically without altering global state
-  const filteredStudents = students.filter(
-    (student) =>
-      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('students-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'students' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setStudents((prev) => [...prev, payload.new]);
+          } else if (payload.eventType === 'UPDATE') {
+            setStudents((prev) =>
+              prev.map((s) => (s.id === payload.new.id ? payload.new : s))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setStudents((prev) => prev.filter((s) => s.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
 
-  const sortedFilteredStudents = [...filteredStudents].sort((a, b) => {
-    const fieldA = a[sortField].toLowerCase();
-    const fieldB = b[sortField].toLowerCase();
-    if (sortOrder === 'asc') {
-      return fieldA < fieldB ? -1 : fieldA > fieldB ? 1 : 0;
-    } else {
-      return fieldA > fieldB ? -1 : fieldA < fieldB ? 1 : 0;
-    }
-  });
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [setStudents]);
 
+  // Filter & sort memoized
+  const sortedFilteredStudents = useMemo(() => {
+    const filtered = students.filter(
+      (s) =>
+        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return filtered.sort((a, b) => {
+      const fieldA = a[sortField].toLowerCase();
+      const fieldB = b[sortField].toLowerCase();
+      return sortOrder === 'asc'
+        ? fieldA.localeCompare(fieldB)
+        : fieldB.localeCompare(fieldA);
+    });
+  }, [students, searchQuery, sortField, sortOrder]);
+
+  // Add / Update handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validate inputs
     if (!name.trim() || !email.trim()) {
       setErrorMessage('Please fill in both name and email fields.');
       setTimeout(() => setErrorMessage(''), 3000);
@@ -76,7 +96,7 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
 
     setLoading(true);
     if (editingStudentId) {
-      // Check if email is unchanged or not a duplicate for update
+      // Check for duplicate email during update
       const currentStudent = students.find((s) => s.id === editingStudentId);
       if (currentStudent?.email !== email) {
         const { data: existing } = await supabase
@@ -91,14 +111,12 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
           return;
         }
       }
-
-      // Update existing student in Supabase
+      // Update student
       const { data, error } = await supabase
         .from('students')
         .update({ name, email })
         .eq('id', editingStudentId)
         .select();
-
       if (error) {
         const errorMsg =
           error.code === '23505'
@@ -109,17 +127,11 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
         setLoading(false);
         return;
       }
-
       if (data && data.length > 0) {
-        setStudents(
-          students.map((student) =>
-            student.id === editingStudentId ? data[0] : student
-          )
-        );
         setSuccessMessage(`Student updated: ${name}, ${email}`);
       }
     } else {
-      // Check for duplicate email before adding
+      // Check for duplicate email during insert
       const { data: existing } = await supabase
         .from('students')
         .select('id')
@@ -130,8 +142,7 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
         setLoading(false);
         return;
       }
-
-      // Add new student to Supabase
+      // Add student
       const { data, error } = await supabase
         .from('students')
         .insert([{ name, email }])
@@ -146,9 +157,7 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
         setLoading(false);
         return;
       }
-
       if (data && data.length > 0) {
-        setStudents([...students, data[0]]);
         setSuccessMessage(`Student added: ${name}, ${email}`);
       }
     }
@@ -156,14 +165,14 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
     setName('');
     setEmail('');
     setEditingStudentId(null);
-    setTimeout(() => setSuccessMessage(''), 3000);
     setLoading(false);
+    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  const handleEdit = (student: { id: string; name: string; email: string }) => {
-    setName(student.name);
-    setEmail(student.email);
-    setEditingStudentId(student.id);
+  const handleEdit = (s: { id: string; name: string; email: string }) => {
+    setName(s.name);
+    setEmail(s.email);
+    setEditingStudentId(s.id);
   };
 
   const handleCancelEdit = () => {
@@ -174,7 +183,6 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
 
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to delete ${name}?`)) return;
-
     setLoading(true);
     const { error } = await supabase.from('students').delete().eq('id', id);
     if (error) {
@@ -183,8 +191,6 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
       setLoading(false);
       return;
     }
-
-    setStudents(students.filter((student) => student.id !== id));
     setSuccessMessage(`Student ${name} deleted successfully.`);
     setTimeout(() => setSuccessMessage(''), 3000);
     setLoading(false);
@@ -194,13 +200,9 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
     <div className="p-6 max-w-2xl mx-auto bg-white shadow-md rounded-lg">
       <h2 className="text-2xl font-bold mb-4 text-gray-800">Student Dashboard</h2>
       <p className="text-gray-600 mb-6">Welcome to the school management system!</p>
-
-      {/* Add / Update Form */}
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div className="flex flex-col">
-          <label htmlFor="name" className="mb-1 font-semibold text-gray-700">
-            Name:
-          </label>
+          <label htmlFor="name" className="mb-1 font-semibold text-gray-700">Name:</label>
           <input
             type="text"
             id="name"
@@ -210,11 +212,8 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
             className="p-2 w-full border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-
         <div className="flex flex-col">
-          <label htmlFor="email" className="mb-1 font-semibold text-gray-700">
-            Email:
-          </label>
+          <label htmlFor="email" className="mb-1 font-semibold text-gray-700">Email:</label>
           <input
             type="email"
             id="email"
@@ -224,27 +223,18 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
             className="p-2 w-full border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-
         <div className="flex space-x-2">
           <button
             type="submit"
-            className={`px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition ${
-              loading ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            className={`px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={loading}
           >
-            {loading
-              ? 'Submitting...'
-              : editingStudentId
-              ? 'Update Student'
-              : 'Add Student'}
+            {loading ? 'Submitting...' : editingStudentId ? 'Update Student' : 'Add Student'}
           </button>
           {editingStudentId && (
             <button
               type="button"
-              className={`px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition ${
-                loading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={handleCancelEdit}
               disabled={loading}
             >
@@ -253,21 +243,15 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
           )}
         </div>
       </form>
-
-      {/* Status Messages */}
       {successMessage && (
         <p className="mt-4 text-green-600 font-semibold">{successMessage}</p>
       )}
       {errorMessage && (
         <p className="mt-4 text-red-600 font-semibold">{errorMessage}</p>
       )}
-
-      {/* Search and Sort Controls */}
       <div className="mt-6 space-y-2">
         <div className="flex space-x-2 items-center">
-          <label htmlFor="search" className="text-gray-700 font-semibold">
-            Search:
-          </label>
+          <label htmlFor="search" className="text-gray-700 font-semibold">Search:</label>
           <input
             type="text"
             id="search"
@@ -277,11 +261,8 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
             className="p-2 w-full border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-
         <div className="flex space-x-2 items-center">
-          <label htmlFor="sortField" className="text-gray-700 font-semibold">
-            Sort by:
-          </label>
+          <label htmlFor="sortField" className="text-gray-700 font-semibold">Sort by:</label>
           <select
             id="sortField"
             value={sortField}
@@ -291,10 +272,7 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
             <option value="name">Name</option>
             <option value="email">Email</option>
           </select>
-
-          <label htmlFor="sortOrder" className="text-gray-700 font-semibold">
-            Order:
-          </label>
+          <label htmlFor="sortOrder" className="text-gray-700 font-semibold">Order:</label>
           <select
             id="sortOrder"
             value={sortOrder}
@@ -306,8 +284,6 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
           </select>
         </div>
       </div>
-
-      {/* Student List */}
       {loading ? (
         <p className="mt-4 text-gray-600">Loading...</p>
       ) : (
@@ -315,29 +291,23 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
           {sortedFilteredStudents.length === 0 ? (
             <p className="text-gray-600">No students found.</p>
           ) : (
-            sortedFilteredStudents.map((student) => (
+            sortedFilteredStudents.map((s) => (
               <li
-                key={student.id}
+                key={s.id}
                 className="flex justify-between items-center p-3 bg-gray-50 border border-gray-200 rounded"
               >
-                <span className="text-gray-800">
-                  {student.name} ({student.email})
-                </span>
+                <span className="text-gray-800">{s.name} ({s.email})</span>
                 <div className="flex space-x-2">
                   <button
-                    className={`px-3 py-1 bg-yellow-500 text-black rounded hover:bg-yellow-600 transition ${
-                      loading ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                    onClick={() => handleEdit(student)}
+                    className={`px-3 py-1 bg-yellow-500 text-black rounded hover:bg-yellow-600 transition ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => handleEdit(s)}
                     disabled={loading}
                   >
                     Edit
                   </button>
                   <button
-                    className={`px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition ${
-                      loading ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                    onClick={() => handleDelete(student.id, student.name)}
+                    className={`px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => handleDelete(s.id, s.name)}
                     disabled={loading}
                   >
                     Delete
