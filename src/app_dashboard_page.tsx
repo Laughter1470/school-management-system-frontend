@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import './Dashboard.css';
 import { supabase } from './supabase';
 
 // Define props interface
 interface DashboardPageProps {
   students: { id: string; name: string; email: string }[];
-  setStudents: React.Dispatch<
-    React.SetStateAction<{ id: string; name: string; email: string }[]>
-  >;
+  setStudents: React.Dispatch<React.SetStateAction<{ id: string; name: string; email: string }[]>>;
 }
 
 function DashboardPage({ students, setStudents }: DashboardPageProps) {
@@ -17,6 +14,8 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<'name' | 'email'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Email validation regex
   const isValidEmail = (email: string) => {
@@ -39,6 +38,20 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
     };
     fetchStudents();
   }, [setStudents]);
+
+  // Sort students when sortField or sortOrder changes
+  useEffect(() => {
+    const sortedStudents = [...students].sort((a, b) => {
+      const fieldA = a[sortField].toLowerCase();
+      const fieldB = b[sortField].toLowerCase();
+      if (sortOrder === 'asc') {
+        return fieldA < fieldB ? -1 : fieldA > fieldB ? 1 : 0;
+      } else {
+        return fieldA > fieldB ? -1 : fieldA < fieldB ? 1 : 0;
+      }
+    });
+    setStudents(sortedStudents);
+  }, [sortField, sortOrder, students, setStudents]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,10 +91,9 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
         .eq('id', editingStudentId)
         .select();
       if (error) {
-        const errorMsg =
-          error.code === '23505'
-            ? 'This email is already in use by another student.'
-            : 'Failed to update student: ' + error.message;
+        const errorMsg = error.code === '23505'
+          ? 'This email is already in use by another student.'
+          : 'Failed to update student: ' + error.message;
         setErrorMessage(errorMsg);
         setTimeout(() => setErrorMessage(''), 3000);
         setLoading(false);
@@ -108,15 +120,11 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
         return;
       }
       // Add new student to Supabase
-      const { data, error } = await supabase
-        .from('students')
-        .insert([{ name, email }])
-        .select();
+      const { data, error } = await supabase.from('students').insert([{ name, email }]).select();
       if (error) {
-        const errorMsg =
-          error.code === '23505'
-            ? 'This email is already in use by another student.'
-            : 'Failed to add student: ' + error.message;
+        const errorMsg = error.code === '23505'
+          ? 'This email is already in use by another student.'
+          : 'Failed to add student: ' + error.message;
         setErrorMessage(errorMsg);
         setTimeout(() => setErrorMessage(''), 3000);
         setLoading(false);
@@ -168,70 +176,100 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
   };
 
   return (
-    <div className="dashboard-container">
-      <h2>Student Dashboard</h2>
-      <p>Welcome to the school management system!</p>
-      <form className="form" onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="name">Name:</label>
+    <div className="p-6 max-w-2xl mx-auto bg-white shadow-md rounded-lg">
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">Student Dashboard</h2>
+      <p className="text-gray-600 mb-6">Welcome to the school management system!</p>
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <div className="flex flex-col">
+          <label htmlFor="name" className="mb-1 font-semibold text-gray-700">Name:</label>
           <input
             type="text"
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={loading}
+            className="p-2 w-full border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <div className="form-group">
-          <label htmlFor="email">Email:</label>
+        <div className="flex flex-col">
+          <label htmlFor="email" className="mb-1 font-semibold text-gray-700">Email:</label>
           <input
             type="email"
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={loading}
+            className="p-2 w-full border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <button type="submit" className="submit-button" disabled={loading}>
-          {loading
-            ? 'Submitting...'
-            : editingStudentId
-              ? 'Update Student'
-              : 'Add Student'}
-        </button>
-        {editingStudentId && (
+        <div className="flex space-x-2">
           <button
-            type="button"
-            className="cancel-button"
-            onClick={handleCancelEdit}
+            type="submit"
+            className={`px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={loading}
           >
-            Cancel
+            {loading ? 'Submitting...' : editingStudentId ? 'Update Student' : 'Add Student'}
           </button>
-        )}
+          {editingStudentId && (
+            <button
+              type="button"
+              className={`px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={handleCancelEdit}
+              disabled={loading}
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
-      {successMessage && <p className="success-message">{successMessage}</p>}
-      {errorMessage && <p className="error-message">{errorMessage}</p>}
+      {successMessage && (
+        <p className="mt-4 text-green-600 font-semibold">{successMessage}</p>
+      )}
+      {errorMessage && (
+        <p className="mt-4 text-red-600 font-semibold">{errorMessage}</p>
+      )}
+      <div className="mt-4 flex space-x-2">
+        <label htmlFor="sortField" className="text-gray-700 font-semibold">Sort by:</label>
+        <select
+          id="sortField"
+          value={sortField}
+          onChange={(e) => setSortField(e.target.value as 'name' | 'email')}
+          className="p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="name">Name</option>
+          <option value="email">Email</option>
+        </select>
+        <label htmlFor="sortOrder" className="text-gray-700 font-semibold">Order:</label>
+        <select
+          id="sortOrder"
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+          className="p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="asc">Ascending</option>
+          <option value="desc">Descending</option>
+        </select>
+      </div>
       {loading ? (
-        <p>Loading...</p>
+        <p className="mt-4 text-gray-600">Loading...</p>
       ) : (
-        <ul className="student-list">
+        <ul className="mt-6 space-y-3">
           {students.length === 0 ? (
-            <p>No students yet.</p>
+            <p className="text-gray-600">No students yet.</p>
           ) : (
             students.map((student) => (
-              <li key={student.id} className="student-item">
-                {student.name} ({student.email})
-                <div>
+              <li key={student.id} className="flex justify-between items-center p-3 bg-gray-50 border border-gray-200 rounded">
+                <span className="text-gray-800">{student.name} ({student.email})</span>
+                <div className="flex space-x-2">
                   <button
-                    className="edit-button"
+                    className={`px-3 py-1 bg-yellow-500 text-black rounded hover:bg-yellow-600 transition ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onClick={() => handleEdit(student)}
                     disabled={loading}
                   >
                     Edit
                   </button>
                   <button
-                    className="delete-button"
+                    className={`px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onClick={() => handleDelete(student.id, student.name)}
                     disabled={loading}
                   >

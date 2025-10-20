@@ -1,21 +1,13 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import DashboardPage from './app_dashboard_page.tsx';
 import './App.css';
-import DashboardPage from './app_dashboard_page';
-
-// Define a Student interface
-interface Student {
-  id: string;
-  name: string;
-  email: string;
-}
 
 function App() {
-  const [data, setData] = useState<Student[]>([]);
+  const [students, setStudents] = useState<{ id: string; name: string; email: string }[]>([]);
 
   return (
-    <div className="App">
-      <h1>School Management System</h1>
-      <DashboardPage students={data} setStudents={setData} />
+    <div className="min-h-screen bg-gray-100">
+      <DashboardPage students={students} setStudents={setStudents} />
     </div>
   );
 }
