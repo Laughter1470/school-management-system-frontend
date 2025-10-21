@@ -1,16 +1,29 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
-import './App.css';
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import './index.css';
+import DashboardPage from './app_dashboard_page';
+import LoginPage from './LoginPage';
 
-const rootElement = document.getElementById('root');
-if (rootElement) {
-  const root = createRoot(rootElement);
-  root.render(
-    <StrictMode>
-      <App />
-    </StrictMode>
+const App = () => {
+  const [students, setStudents] = React.useState<{ id: string; name: string; email: string }[]>([]);
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/dashboard"
+          element={<DashboardPage students={students} setStudents={setStudents} />}
+        />
+        <Route path="/" element={<LoginPage />} />
+      </Routes>
+    </BrowserRouter>
   );
-} else {
-  console.error('Root element not found');
-}
+};
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from './supabase';
+import { useNavigate } from 'react-router-dom';
 import debounce from 'lodash/debounce';
 
 // Define props interface
@@ -33,7 +34,19 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
   const [inputValue, setInputValue] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [theme, setTheme] = useState('light');
+  const navigate = useNavigate();
   const studentsPerPage = 5;
+
+  // Check auth state
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate('/login');
+      }
+    };
+    checkUser();
+  }, [navigate]);
 
   // Theme toggle
   useEffect(() => {
@@ -49,6 +62,11 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
     console.log('Toggled to theme:', newTheme, 'Dark class:', document.documentElement.classList.contains('dark'));
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login');
   };
 
   // Email validation
@@ -369,18 +387,27 @@ function DashboardPage({ students, setStudents }: DashboardPageProps) {
     <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-500">
       <div className="max-w-2xl mx-auto p-4 sm:p-6 bg-white dark:bg-gray-800 shadow-md rounded-lg">
         <div className="sticky top-0 bg-white dark:bg-gray-900 shadow-md border-b border-gray-200 dark:border-gray-700 z-20 py-4">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center flex-wrap gap-2">
             <div>
               <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Student Dashboard</h2>
               <p className="text-gray-600 dark:text-gray-300 mt-2">Welcome to the school management system!</p>
             </div>
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-              aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-            >
-              {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-            </button>
+            <div className="flex space-x-2">
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              >
+                {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+              </button>
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 dark:hover:bg-red-500 transition"
+                aria-label="Logout"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
         <form className="space-y-4 mt-4" onSubmit={handleSubmit}>
