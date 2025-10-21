@@ -1,73 +1,50 @@
-# React + TypeScript + Vite
+School Management System
+A real-time student dashboard for managing student records with secure authentication.
+Live Demo
+https://school-management-system-frontend-tau.vercel.app
+Features
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+CRUD Operations: Add, edit, delete students with Supabase backend.
+Real-Time Updates: Instant data sync across sessions.
+Search & Sort: Filter students by name/email, sort by name/email.
+Pagination: Responsive pagination with ellipsis.
+Form Validation: Real-time name and email validation with uniqueness check.
+Animations: Fade-in/out for messages, shake for errors.
+Dark/Light Mode: Theme toggle with localStorage persistence.
+Mobile Responsive: Optimized for phones and tablets.
+User Authentication: Secure login/signup with Supabase Auth.
+Sticky Header: Fixed navigation for better UX.
 
-Currently, two official plugins are available:
+Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Frontend: React + Vite + TypeScript
+Styling: Tailwind CSS
+Backend: Supabase (Database, Auth, Realtime)
+Routing: React Router
+Deployment: Vercel
 
-## React Compiler
+Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Clone the repo:git clone https://github.com/Laughter1470/school-management-system-frontend.git
+cd school-management-system-frontend
 
-## Expanding the ESLint configuration
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Install dependencies:npm install
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Set up environment variables in .env:VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Run locally:npm run dev
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+
+Deployment
+Deployed on Vercel. Update environment variables in Vercel dashboard and push to GitHub for auto-deployment.
+Future Enhancements
+
+Password strength validation
+Admin roles for restricted access
+Student profile details (photo, grades)
+CSV export for student list
