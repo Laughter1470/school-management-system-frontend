@@ -5,14 +5,15 @@ import { useNavigate } from 'react-router-dom';
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
   const navigate = useNavigate();
 
-  // ✅ Password validation function
+  // Password validation for signup
   const validatePassword = (pwd: string) => {
+    if (!isSignUp) return ''; // Skip validation for login
     if (pwd.length < 8) return 'Password must be at least 8 characters';
     if (!/[A-Z]/.test(pwd)) return 'Password must contain an uppercase letter';
     if (!/[a-z]/.test(pwd)) return 'Password must contain a lowercase letter';
@@ -21,19 +22,21 @@ const LoginPage = () => {
     return '';
   };
 
-  // ✅ Auth handler (with weak password check)
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
-
-    // Block weak passwords on signup
-    if (isSignUp && passwordError) {
-      setError(passwordError);
-      setLoading(false);
-      return;
+    setPasswordError('');
+    
+    // Validate password for signup
+    if (isSignUp) {
+      const pwdError = validatePassword(password);
+      if (pwdError) {
+        setPasswordError(pwdError);
+        return;
+      }
     }
 
+    setLoading(true);
     try {
       let result;
       if (isSignUp) {
@@ -60,13 +63,9 @@ const LoginPage = () => {
         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">
           {isSignUp ? 'Sign Up' : 'Login'}
         </h2>
-
         <form onSubmit={handleAuth} className="space-y-4">
-          {/* Email Input */}
           <div className="flex flex-col">
-            <label htmlFor="email" className="mb-1 font-semibold text-gray-700 dark:text-gray-200">
-              Email:
-            </label>
+            <label htmlFor="email" className="mb-1 font-semibold text-gray-700 dark:text-gray-200">Email:</label>
             <input
               type="email"
               id="email"
@@ -76,19 +75,15 @@ const LoginPage = () => {
               className="p-2 w-full border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
-
-          {/* Password Input */}
           <div className="flex flex-col">
-            <label htmlFor="password" className="mb-1 font-semibold text-gray-700 dark:text-gray-200">
-              Password:
-            </label>
+            <label htmlFor="password" className="mb-1 font-semibold text-gray-700 dark:text-gray-200">Password:</label>
             <input
               type="password"
               id="password"
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
-                if (isSignUp) setPasswordError(validatePassword(e.target.value));
+                setPasswordError(validatePassword(e.target.value));
               }}
               disabled={loading}
               className={`p-2 w-full border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 ${
@@ -99,31 +94,23 @@ const LoginPage = () => {
               <p className="mt-1 text-sm text-red-600">{passwordError}</p>
             )}
           </div>
-
-          {/* Error Message */}
           {error && (
             <p className="text-red-600 dark:text-red-200 text-sm">{error}</p>
           )}
-
-          {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading || (isSignUp && passwordError)}
             className={`px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition w-full flex items-center justify-center ${
-              loading || (isSignUp && passwordError) ? 'opacity-50 cursor-not-allowed' : ''
+              loading || passwordError ? 'opacity-50 cursor-not-allowed' : ''
             }`}
+            disabled={loading || !!passwordError}
           >
             {loading ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                 Processing...
               </>
-            ) : (
-              isSignUp ? 'Sign Up' : 'Login'
-            )}
+            ) : isSignUp ? 'Sign Up' : 'Login'}
           </button>
-
-          {/* Toggle Button */}
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
